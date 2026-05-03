@@ -1,187 +1,169 @@
-# Baseline Reproduction – 7/9-Rate Sparse Code for STT-MRAM
+# STT-MRAM Decoding Experiments
 
-**Paper:** "On the Design of 7/9-Rate Sparse Code for Spin-Torque Transfer Magnetic Random Access Memory"  
-**Author:** Chi Dinh Nguyen (FPT University, Hanoi) · IEEE Access, Vol. 9, 2021  
-**DOI:** [10.1109/ACCESS.2021.3134282](https://doi.org/10.1109/ACCESS.2021.3134282)
+> A modular Monte-Carlo simulation framework for STT-MRAM channel modeling and decoder evaluation, with baseline reproduction of the 7/9-Rate Sparse Code.
+
+[![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python)](https://www.python.org/)
+[![NumPy](https://img.shields.io/badge/NumPy-1.21%2B-013243?logo=numpy)](https://numpy.org/)
+[![Matplotlib](https://img.shields.io/badge/Matplotlib-3.4%2B-blue)](https://matplotlib.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
-## Cấu trúc thư mục
+## Overview
+
+This project reproduces and extends the results from the following paper:
+
+> **"On the Design of 7/9-Rate Sparse Code for Spin-Torque Transfer Magnetic Random Access Memory"**  
+> Chi Dinh Nguyen, FPT University, Hanoi — *IEEE Access*, Vol. 9, 2021  
+> DOI: [10.1109/ACCESS.2021.3134282](https://doi.org/10.1109/ACCESS.2021.3134282)
+
+**Primary goals:**
+- Reproduce Figures 5–10 from the paper using Monte-Carlo simulation
+- Provide a clean, extensible framework for benchmarking new decoder architectures against the baseline
+
+---
+
+## Project Structure
 
 ```
 project_stt_mram/
 │
-├── config.py                      ← Cấu hình chung (plot style, đường dẫn, constants)
-├── codebook.py                    ← Codebook 128 codewords (weight 2 & 4, n=9)
-├── channel.py                     ← Kênh cascade: BAC → Z-channel → GMC
-├── decoders.py                    ← Decoder baseline: ML soft + Hard threshold
-├── metrics.py                     ← Đo lỗi: BER / FER, idx ↔ bits
-├── simulation.py                  ← Engine Monte-Carlo + save/load kết quả
+├── config.py                      ← Global config (plot style, paths, constants)
+├── codebook.py                    ← 128-codeword codebook (weight 2 & 4, n=9)
+├── channel.py                     ← Cascade channel: BAC → Z-channel → GMC
+├── decoders.py                    ← Baseline decoders: ML soft + hard threshold
+├── metrics.py                     ← BER / FER computation, idx ↔ bits conversion
+├── simulation.py                  ← Monte-Carlo engine + result caching (save/load)
 │
 ├── experiments/
-│   ├── fig5_attenuator.py         ← BER/FER vs α
-│   ├── fig6_ber_vs_p1.py          ← BER vs P₁
-│   ├── fig7_sigma_no_offset.py    ← BER/FER vs σ₀/μ₀ (no offset)
+│   ├── fig5_attenuator.py         ← BER/FER vs α (attenuator sweep)
+│   ├── fig6_ber_vs_p1.py          ← BER vs write error probability P₁
+│   ├── fig7_sigma_no_offset.py    ← BER/FER vs σ₀/μ₀ (no temperature offset)
 │   ├── fig8_offset_4pct.py        ← BER/FER vs σ₀/μ₀ (σ_ofs = 4%)
 │   ├── fig9_offset_7pct.py        ← BER/FER vs σ₀/μ₀ (σ_ofs = 7%)
-│   ├── fig10_comparison.py        ← So sánh offset 4% vs 7%
-│   ├── summary_dashboard.py       ← Dashboard 6 hình trong 1 ảnh
-│   └── exp_custom_decoder_template.py  ← Template để test decoder mới ← BẮT ĐẦU TỪ ĐÂY
+│   ├── fig10_comparison.py        ← Offset comparison: 4% vs 7%
+│   ├── summary_dashboard.py       ← All 6 figures in a single dashboard image
+│   └── exp_custom_decoder_template.py  ← ⭐ Start here to test a new decoder
 │
-├── results/                       ← Cache kết quả .npz (tự tạo khi chạy)
-├── figures/                       ← Ảnh output PNG
+├── results/                       ← Auto-generated .npz cache files (on first run)
+├── figures/                       ← Output PNG figures
 │
-├── run_all.py                     ← Chạy toàn bộ baseline
-├── check_setup.py                 ← Kiểm tra cài đặt
-└── stt_mram_sparse_code.py        ← File gốc (backup, không sửa)
+├── plans/                         ← Research notes and paper analysis
+├── rules/                         ← Project conventions and workflow guides
+│
+├── run_all.py                     ← Run all baseline experiments
+└── check_setup.py                 ← Verify environment setup
 ```
 
 ---
 
-## Yêu cầu
+## Requirements
 
 ```bash
 pip install numpy matplotlib
 ```
 
-Python >= 3.9.
+- Python >= 3.9
+- No GPU required — all simulations run on CPU via NumPy
 
 ---
 
-## Cách chạy baseline
+## Quick Start
 
-### Chạy tất cả 6 figures (300k frames/điểm, ~30–60 phút)
-```bash
-python run_all.py
-```
-
-### Test nhanh để kiểm tra không lỗi (10k frames/điểm, ~2 phút)
-```bash
-python run_all.py --quick
-```
-
-### Chạy từng figure riêng lẻ
-```bash
-python experiments/fig5_attenuator.py
-python experiments/fig7_sigma_no_offset.py
-# ... tương tự cho các fig khác
-```
-
-### Kiểm tra cài đặt
+### 1. Verify your environment
 ```bash
 python check_setup.py
 ```
 
----
+### 2. Run all 6 baseline figures
+```bash
+# Full run (300k frames/point, ~30–60 min)
+python run_all.py
 
-## Thêm decoder mới & so sánh với baseline
-
-Đây là workflow chính khi bạn muốn **cải tiến kiến trúc khối giải mã**.
-
-### Tổng quan cơ chế
-
-`simulate()` trong `simulation.py` chấp nhận tham số `custom_decoder=`:
-
-```python
-result = simulate(
-    n_frames=300_000, P1=2e-4, sigma_ratio=0.09, alpha=2.5,
-    custom_decoder=my_decoder_fn,   # ← truyền decoder của bạn vào đây
-)
-# result sẽ có thêm: result['BER_custom'], result['FER_custom']
-# cùng với baseline:  result['BER_soft'], result['BER_hard'], result['BER_raw']
+# Quick test to verify correctness (10k frames/point, ~2 min)
+python run_all.py --quick
 ```
 
-Decoder của bạn nhận tín hiệu đầu ra của kênh và trả về user-data index:
-
-```python
-def my_decoder(received: np.ndarray, **ctx) -> np.ndarray:
-    """
-    received : (N, 9) float32  – tín hiệu liên tục từ kênh GMC
-    ctx      : dict chứa {alpha, threshold, mu0, mu1, sig0, sig1_eff}
-
-    Trả về : (N,) int32  – user-data index từ 0 đến 127
-    """
-    ...
+### 3. Run a specific figure
+```bash
+python experiments/fig7_sigma_no_offset.py
+python experiments/fig5_attenuator.py
+# ... and so on
 ```
+
+Output files will be saved to:
+- `results/*.npz` — numerical results (cached)
+- `figures/*.png` — plot images
 
 ---
 
-### Bước 1 – Implement decoder mới trong `decoders.py`
+## Testing a New Decoder
 
-Mở `decoders.py` và thêm hàm của bạn vào cuối file. Hai hàm baseline có sẵn để tham khảo cách viết:
+The core design goal of this framework is to make it easy to plug in and compare a custom decoder against the baseline. Here is the full workflow:
+
+### Step 1 — Implement your decoder in `decoders.py`
+
+Add a new function at the bottom of `decoders.py`. The two existing baseline functions serve as references:
 
 ```python
-# decoders.py  (thêm vào cuối)
+# decoders.py
 
 def my_new_decoder(received: np.ndarray, **ctx) -> np.ndarray:
-    """Decoder kiến trúc mới của tôi."""
+    """
+    Args:
+        received : (N, 9) float32  — continuous signal from the GMC channel
+        ctx      : dict containing {alpha, threshold, mu0, mu1, sig0, sig1_eff}
+
+    Returns:
+        (N,) int32  — user-data index in range [0, 127]
+    """
     alpha     = ctx['alpha']
     threshold = ctx['threshold']
-    mu0       = ctx['mu0']
-    mu1       = ctx['mu1']
+    mu0, mu1  = ctx['mu0'], ctx['mu1']
     sig0      = ctx['sig0']
-    sig1_eff  = ctx['sig1_eff']
 
-    # --- Viết logic decoder của bạn ở đây ---
-    # Ví dụ: soft_decode đã được sửa đổi
+    # --- Your decoding logic here ---
     from codebook import CB
     r = (received / alpha).astype('float32')
-    # ... thuật toán của bạn ...
-    return decoded_indices   # shape (N,), dtype int32
+    # ...
+    return decoded_indices  # shape (N,), dtype int32
 ```
 
-> **Lưu ý:** Chỉ cần implement hàm này. Không cần sửa `simulation.py` hay bất kỳ file engine nào.
+> **Note:** Only the decoder function needs to be implemented. You do not need to modify `simulation.py` or any engine file.
 
----
+### Step 2 — Create an experiment file from the template
 
-### Bước 2 – Tạo file experiment riêng
-
-Copy template và đặt tên theo decoder của bạn:
-
-```bash
-# Windows
-copy experiments\exp_custom_decoder_template.py experiments\exp_my_new_decoder.py
-
-# hoặc PowerShell
+```powershell
 Copy-Item experiments\exp_custom_decoder_template.py experiments\exp_my_new_decoder.py
 ```
 
-Mở file mới, sửa **2 chỗ**:
+Open the new file and edit **two lines**:
 
 ```python
-# ① Đặt tên cho decoder (dùng trong tên file output)
-EXPERIMENT_NAME = "my_new_decoder"   # ← sửa tên ở đây
+# ① Set a unique name for your experiment (used in output filenames)
+EXPERIMENT_NAME = "my_new_decoder"
 
-# ② Import và dùng decoder của bạn thay vì placeholder
-from decoders import my_new_decoder   # ← import hàm vừa viết
+# ② Import and wire up your decoder
+from decoders import my_new_decoder
 
-def my_decoder(received, **ctx):       # hàm wrapper gọi vào decoder
+def my_decoder(received, **ctx):
     return my_new_decoder(received, **ctx)
 ```
 
-> File experiment chứa `run()` (chạy simulation + tự cache) và `plot()` (vẽ so sánh).  
-> Bạn **không cần sửa** phần còn lại nếu chỉ muốn so sánh trên Fig 7.
-
----
-
-### Bước 3 – Chạy và xem kết quả
+### Step 3 — Run and compare
 
 ```bash
-# Chạy lần đầu (tính toán đầy đủ, mất 30-60 phút với 300k frames)
+# First run: computes and caches results (~30–60 min with 300k frames)
 python experiments/exp_my_new_decoder.py
 
-# Lần sau load từ cache, không tính lại (~1 giây)
+# Subsequent runs: loads from cache instantly (~1 sec)
 python experiments/exp_my_new_decoder.py
 
-# Muốn bắt buộc tính lại (ví dụ sau khi sửa decoder)
+# Force recompute (e.g., after modifying your decoder)
 python experiments/exp_my_new_decoder.py --rerun
 ```
 
-Output sẽ bao gồm:
-- `results/custom_my_new_decoder_fig7.npz` — dữ liệu số (cache)
-- `figures/custom_my_new_decoder_fig7.png` — figure so sánh
-
-**Ví dụ console output:**
+**Example console output:**
 ```
 --- Experiment: my_new_decoder (Fig 7, n=300,000) ---
   σ/μ=8%   baseline=1.2e-04  custom=8.5e-05  raw=5.0e-04
@@ -191,77 +173,59 @@ Output sẽ bao gồm:
   → Saved figures/custom_my_new_decoder_fig7.png
 ```
 
----
-
-### Ví dụ: So sánh trên nhiều figure
-
-Nếu bạn muốn so sánh trên Fig 8 hoặc Fig 6 thay vì Fig 7, sửa hàm `run()` trong file experiment:
-
-```python
-# Thay đổi sig_vals và các tham số simulation trong run()
-for sr in sig_vals:
-    r = simulate(
-        n_frames=n_frames,
-        P1=2e-4,
-        sigma_ratio=sr,
-        alpha=alpha,
-        mu_ofs=-0.2,          # ← thêm offset để ra Fig 8
-        sig_ofs_ratio=0.04,   # ← thêm offset để ra Fig 8
-        batch=5000,
-        custom_decoder=my_decoder,
-    )
-```
-
----
-
-### Sơ đồ luồng dữ liệu
+### Data Flow
 
 ```
-decoders.py          ← Thêm hàm decoder mới ở đây
-    │
-    ▼
+decoders.py              ← Add your decoder function here
+     │
+     ▼
 experiments/
-exp_my_new_decoder.py  ← Copy từ template, sửa 2 chỗ
-    │  (gọi simulate() với custom_decoder=)
-    ▼
-simulation.py          ← Không cần sửa
-    │  (chạy kênh, baseline, custom song song)
-    ▼
-results/*.npz          ← Cache kết quả số
-figures/*.png          ← Figure so sánh
+exp_my_new_decoder.py    ← Copy from template, edit 2 lines
+     │  (calls simulate() with custom_decoder=)
+     ▼
+simulation.py            ← No changes needed
+     │  (runs channel + baseline + custom in parallel)
+     ▼
+results/*.npz            ← Cached numerical results
+figures/*.png            ← Comparison plots
 ```
 
 ---
 
-## Các tham số chính
+## Key Parameters
 
-| Tham số | Ý nghĩa | Giá trị paper |
-|---------|---------|--------------|
-| `P1` | Xác suất lỗi ghi 0→1 (dominant) | `2e-4` |
-| `sigma_ratio` | σ₀/μ₀ = σ₁/μ₁ (chất lượng fabrication) | `0.09` (9%) |
-| `alpha` | Hệ số suy giảm cho ML decoder | `2.5` (tối ưu từ Fig 5) |
-| `mu0`, `mu1` | Điện trở trung bình (kΩ) | `1.0`, `2.0` |
-| `mu_ofs` | Offset điện trở do nhiệt độ (kΩ) | `0.0` hoặc `-0.2` |
+| Parameter | Description | Paper Value |
+|-----------|-------------|-------------|
+| `P1` | Write error probability (0→1, dominant) | `2e-4` |
+| `sigma_ratio` | σ₀/μ₀ = σ₁/μ₁ (fabrication quality) | `0.09` (9%) |
+| `alpha` | Attenuation factor for the ML decoder | `2.5` (optimal from Fig 5) |
+| `mu0`, `mu1` | Mean resistance levels (kΩ) | `1.0`, `2.0` |
+| `mu_ofs` | Resistance offset due to temperature (kΩ) | `0.0` or `-0.2` |
 | `sig_ofs_ratio` | σ_ofs / μ₁ | `0.0`, `0.04`, `0.07` |
-| `n_frames` | Số frame Monte-Carlo | `300_000` |
+| `n_frames` | Number of Monte-Carlo frames | `300_000` |
 
 ---
 
-## Kết quả baseline tóm tắt
+## Baseline Results Summary
 
-| Figure | Kết quả chính |
-|--------|--------------|
-| Fig 5 | α tối ưu = **2.5** (khớp paper) |
-| Fig 6 | Error floor raw ≈ 10⁻³; code ≈ 10⁻⁴ |
-| Fig 7 | Code cải thiện ~2.2% σ₀/μ₀ so với raw data |
-| Fig 8–9 | Code ít nhạy cảm hơn với offset nhiệt độ |
-| Fig 10 | σ₀/μ₀ ≥ 5% thì offset 7% bắt đầu ảnh hưởng rõ |
+| Figure | Key Finding |
+|--------|-------------|
+| Fig 5  | Optimal attenuator α = **2.5** (matches paper) |
+| Fig 6  | Raw error floor ≈ 10⁻³; sparse code ≈ 10⁻⁴ |
+| Fig 7  | Code improves tolerance by ~2.2% in σ₀/μ₀ over raw data |
+| Fig 8–9 | Code is significantly less sensitive to temperature offset |
+| Fig 10 | At σ₀/μ₀ ≥ 5%, the 7% offset starts to show visible degradation |
 
 ---
 
-## Ghi chú
+## Notes
 
-- File gốc `stt_mram_sparse_code.py` được giữ nguyên làm **backup** — không bao giờ sửa.
-- Thư mục `results/` tự tạo khi chạy lần đầu.
-- Mỗi lần sửa decoder, nhớ dùng `--rerun` để tính lại cache.
-- Tăng `n_frames` lên `2_000_000` để BER ở vùng thấp sát với paper hơn (chậm hơn ~7×).
+- The `results/` directory is created automatically on the first run.
+- After modifying a decoder, always use `--rerun` to invalidate the cache.
+- Increase `n_frames` to `2_000_000` for BER curves at very low error rates (≈7× slower but closer to the paper).
+
+---
+
+## License
+
+This project is for research and educational purposes. See [LICENSE](LICENSE) for details.
