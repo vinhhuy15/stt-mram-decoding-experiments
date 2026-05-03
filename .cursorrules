@@ -1,0 +1,10 @@
+# Trỏ AI agent tới thư mục rules
+Bạn là AI Assistant đang làm việc trong project "STT-MRAM Sparse Code".
+TRƯỚC KHI thực hiện bất kỳ thay đổi nào hoặc trả lời câu hỏi về code, bạn BẮT BUỘC phải đọc các file trong thư mục `rules/`:
+
+1. Đọc `rules/05_agent_instructions.md` (Hướng dẫn dành riêng cho bạn).
+2. Đọc `rules/00_project_invariants.md` (Những file tuyệt đối không được sửa).
+3. Đọc `rules/01_file_ownership.md` để biết file nào được quyền sửa.
+
+Nếu user yêu cầu tạo decoder mới, hãy làm theo chuẩn trong `rules/02_adding_decoder.md`.
+Tuyệt đối không phá vỡ baseline hiện tại.

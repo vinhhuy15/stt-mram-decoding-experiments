@@ -1,0 +1,83 @@
+# =============================================================
+# .gitignore for STT-MRAM Research Project
+# =============================================================
+
+# ---------------------------
+# Python bytecode & caches
+# ---------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+.pytest_cache/
+.mypy_cache/
+
+# ---------------------------
+# Virtual environments
+# ---------------------------
+.venv/
+venv/
+env/
+ENV/
+.conda/
+
+# ---------------------------
+# Jupyter Notebooks checkpoints
+# ---------------------------
+.ipynb_checkpoints/
+
+# ---------------------------
+# ML / Model weights (large files)
+# Nếu muốn track model, dùng Git LFS
+# ---------------------------
+*.pt
+*.pth
+*.ckpt
+*.h5
+*.pkl
+*.pickle
+
+# ---------------------------
+# Result outputs (large / auto-generated)
+# CSV/JSON nhỏ thì nên giữ lại để track tiến độ
+# ---------------------------
+results/*.npy
+results/*.npz
+
+# ---------------------------
+# Figures (PNG/PDF có thể tái tạo từ script)
+# Bỏ comment dòng dưới nếu muốn ignore figures
+# ---------------------------
+# figures/
+
+# ---------------------------
+# IDE & Editor
+# ---------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ---------------------------
+# OS files
+# ---------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------------------------
+# Logs & temp files
+# ---------------------------
+*.log
+*.tmp
+*.temp
+logs/
+tmp/
+
+# ---------------------------
+# dotenv / secrets
+# ---------------------------
+.env
+.env.*
+secrets.yaml
